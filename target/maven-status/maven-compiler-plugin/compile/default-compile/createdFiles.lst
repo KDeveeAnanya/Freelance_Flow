@@ -16,7 +16,9 @@ com\freelanceflow\backend\entity\User.class
 com\freelanceflow\backend\repository\PaymentRepository.class
 com\freelanceflow\backend\service\InvoiceService.class
 com\freelanceflow\backend\entity\ProjectStatus.class
+com\freelanceflow\backend\service\DashboardService.class
 com\freelanceflow\backend\repository\UserRepository.class
+com\freelanceflow\backend\controller\DashboardController.class
 com\freelanceflow\backend\controller\InvoiceController.class
 com\freelanceflow\backend\dto\LoginRequest.class
 com\freelanceflow\backend\service\AuthService.class
@@ -25,6 +27,7 @@ com\freelanceflow\backend\dto\ClientRequest.class
 com\freelanceflow\backend\entity\Client.class
 com\freelanceflow\backend\entity\PaymentMode.class
 com\freelanceflow\backend\BackendApplication.class
+com\freelanceflow\backend\controller\ClientPortalController.class
 com\freelanceflow\backend\config\JwtFilter.class
 com\freelanceflow\backend\controller\AuthController.class
 com\freelanceflow\backend\entity\InvoiceStatus.class

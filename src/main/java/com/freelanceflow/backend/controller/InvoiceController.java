@@ -25,7 +25,14 @@ public class InvoiceController {
         String dueDate = body.get("dueDate") != null ? body.get("dueDate").toString() : null;
         return ResponseEntity.ok(invoiceService.createInvoice(projectId, totalAmount, dueDate));
     }
-
+    @GetMapping("/{invoiceId}/pdf")
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long invoiceId) throws Exception {
+        byte[] pdf = invoiceService.generateInvoicePdf(invoiceId);
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=invoice-" + invoiceId + ".pdf")
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
     @GetMapping("/project/{projectId}")
     public ResponseEntity<List<Invoice>> getInvoices(@PathVariable Long projectId) {
         return ResponseEntity.ok(invoiceService.getInvoicesByProject(projectId));

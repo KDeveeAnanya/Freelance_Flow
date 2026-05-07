@@ -23,4 +23,7 @@ public class Invoice {
     @ManyToOne
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
+    private String portalToken;
+    private Boolean clientConfirmed = false;
+    private LocalDateTime confirmedAt;
 }

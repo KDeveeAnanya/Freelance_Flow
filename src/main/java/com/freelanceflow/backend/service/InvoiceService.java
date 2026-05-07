@@ -6,7 +6,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
+import com.itextpdf.text.*;
+import com.itextpdf.text.pdf.*;
+import java.io.ByteArrayOutputStream;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +31,7 @@ public class InvoiceService {
         invoice.setStatus(InvoiceStatus.DRAFT);
         invoice.setDueDate(dueDate != null ? LocalDate.parse(dueDate) : null);
         invoice.setInvoiceNumber("INV-" + System.currentTimeMillis());
+        invoice.setPortalToken(UUID.randomUUID().toString());  // ← portal token
         return invoiceRepository.save(invoice);
     }
 
@@ -47,7 +53,6 @@ public class InvoiceService {
         payment.setPaymentDate(LocalDate.now());
         paymentRepository.save(payment);
 
-        // update amount paid on invoice
         double totalPaid = paymentRepository.findByInvoiceId(invoiceId)
                 .stream().mapToDouble(Payment::getAmount).sum();
         invoice.setAmountPaid(totalPaid);
@@ -70,4 +75,86 @@ public class InvoiceService {
         invoice.setStatus(InvoiceStatus.valueOf(status));
         return invoiceRepository.save(invoice);
     }
+
+    public Invoice getInvoiceByToken(String token) {
+        return invoiceRepository.findByPortalToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid or expired link"));
+    }
+
+    public Invoice confirmByClient(String token) {
+        Invoice invoice = invoiceRepository.findByPortalToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid link"));
+
+        if (invoice.getClientConfirmed()) {
+            throw new RuntimeException("Already confirmed");
+        }
+
+        invoice.setClientConfirmed(true);
+        invoice.setConfirmedAt(LocalDateTime.now());
+        invoice.setStatus(InvoiceStatus.SENT);
+        return invoiceRepository.save(invoice);
+    }
+
+public byte[] generateInvoicePdf(Long invoiceId) throws Exception {
+    Invoice invoice = invoiceRepository.findById(invoiceId)
+            .orElseThrow(() -> new RuntimeException("Invoice not found"));
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    Document document = new Document();
+    PdfWriter.getInstance(document, out);
+    document.open();
+
+    // Header
+    Font titleFont = new Font(Font.FontFamily.HELVETICA, 22, Font.BOLD);
+    Font normalFont = new Font(Font.FontFamily.HELVETICA, 12);
+    Font boldFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD);
+    Font smallFont = new Font(Font.FontFamily.HELVETICA, 10, Font.NORMAL, BaseColor.GRAY);
+
+    document.add(new Paragraph("INVOICE", titleFont));
+    document.add(new Paragraph(" "));
+
+    // Invoice details
+    document.add(new Paragraph("Invoice Number : " + invoice.getInvoiceNumber(), boldFont));
+    document.add(new Paragraph("Status         : " + invoice.getStatus(), normalFont));
+    document.add(new Paragraph("Due Date       : " + invoice.getDueDate(), normalFont));
+    document.add(new Paragraph("Created At     : " + invoice.getCreatedAt().toLocalDate(), normalFont));
+    document.add(new Paragraph(" "));
+
+    // Freelancer & Client
+    document.add(new Paragraph("From (Freelancer)", boldFont));
+    document.add(new Paragraph(invoice.getProject().getClient().getUser().getName(), normalFont));
+    document.add(new Paragraph(invoice.getProject().getClient().getUser().getEmail(), smallFont));
+    document.add(new Paragraph(" "));
+
+    document.add(new Paragraph("To (Client)", boldFont));
+    document.add(new Paragraph(invoice.getProject().getClient().getName(), normalFont));
+    document.add(new Paragraph(invoice.getProject().getClient().getEmail(), smallFont));
+    document.add(new Paragraph(" "));
+
+    // Project details
+    document.add(new Paragraph("Project Details", boldFont));
+    document.add(new Paragraph("Title       : " + invoice.getProject().getTitle(), normalFont));
+    document.add(new Paragraph("Description : " + invoice.getProject().getDescription(), normalFont));
+    document.add(new Paragraph(" "));
+
+    // Amount table
+    PdfPTable table = new PdfPTable(2);
+    table.setWidthPercentage(100);
+    table.addCell(new PdfPCell(new Phrase("Total Amount", boldFont)));
+    table.addCell(new PdfPCell(new Phrase("₹ " + invoice.getTotalAmount(), normalFont)));
+    table.addCell(new PdfPCell(new Phrase("Amount Paid", boldFont)));
+    table.addCell(new PdfPCell(new Phrase("₹ " + invoice.getAmountPaid(), normalFont)));
+    table.addCell(new PdfPCell(new Phrase("Balance Due", boldFont)));
+    table.addCell(new PdfPCell(new Phrase("₹ " + (invoice.getTotalAmount() - invoice.getAmountPaid()), boldFont)));
+    document.add(table);
+    document.add(new Paragraph(" "));
+
+    // Confirmation status
+    if (invoice.getClientConfirmed()) {
+        document.add(new Paragraph("✓ Client confirmed this invoice on " + invoice.getConfirmedAt().toLocalDate(), smallFont));
+    }
+
+    document.close();
+    return out.toByteArray();
+}
 }
