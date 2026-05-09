@@ -28,10 +28,11 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/api/portal/**", "/api/invoices/*/pdf").permitAll()
+                .requestMatchers("/api/auth/**", "/api/portal/**", "/api/invoices/*/pdf", "/h2-console/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+            http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
         return http.build();
     }
 
