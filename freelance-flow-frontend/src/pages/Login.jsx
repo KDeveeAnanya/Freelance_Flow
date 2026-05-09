@@ -7,7 +7,7 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
+  const [showPassword, setShowPassword] = useState(false);
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -46,11 +46,22 @@ export default function Login() {
               <input style={s.input} type="email" placeholder="you@example.com"
                 value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
             </div>
-            <div style={s.field}>
-              <label style={s.label}>Password</label>
-              <input style={s.input} type="password" placeholder="••••••••"
-                value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
-            </div>
+<div style={s.field}>
+  <label style={s.label}>Password</label>
+  <div style={s.inputWrap}>
+    <input
+      style={s.inputInner}
+      type={showPassword ? 'text' : 'password'}
+      placeholder="••••••••"
+      value={form.password}
+      onChange={e => setForm({ ...form, password: e.target.value })}
+      required
+    />
+    <span style={s.eyeBtn} onClick={() => setShowPassword(!showPassword)}>
+      {showPassword ? '🙈' : '👁️'}
+    </span>
+  </div>
+</div>
             <button style={s.btn} type="submit" disabled={loading}>
               {loading ? 'Signing in...' : '→ Sign in'}
             </button>
@@ -84,4 +95,27 @@ const s = {
   error: { background: '#FCEBEB', color: '#A32D2D', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' },
   switchLink: { textAlign: 'center', marginTop: '24px', fontSize: '13px', color: '#999' },
   link: { color: '#0d0d0d', fontWeight: '500', textDecoration: 'none' },
+  inputWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    background: '#fff',
+    border: '0.5px solid rgba(0,0,0,0.12)',
+    borderRadius: '8px',
+    overflow: 'hidden',
+  },
+  inputInner: {
+    flex: 1,
+    padding: '12px 14px',
+    border: 'none',
+    fontSize: '14px',
+    color: '#0d0d0d',
+    outline: 'none',
+    background: 'transparent',
+  },
+  eyeBtn: {
+    padding: '0 14px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    userSelect: 'none',
+  },
 };
