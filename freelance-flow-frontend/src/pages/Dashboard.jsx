@@ -8,7 +8,15 @@ export default function Dashboard() {
   const name = localStorage.getItem('name');
 
   useEffect(() => {
-    api.get('/dashboard').then(res => setStats(res.data)).catch(() => navigate('/login'));
+    api.get('/dashboard')
+      .then(res => setStats(res.data))
+      .catch((err) => {
+        console.log('Dashboard error:', err.response?.status);
+        if (err.response?.status === 401) {
+          localStorage.clear();
+          navigate('/login');
+        }
+      });
   }, []);
 
   const greeting = () => {
@@ -20,7 +28,6 @@ export default function Dashboard() {
 
   return (
     <div style={s.shell}>
-      {/* Sidebar */}
       <div style={s.sidebar}>
         <div style={s.sideTop}>
           <div style={s.wordmark}>Freelance<span style={s.gold}>Flow</span></div>
@@ -51,7 +58,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Main content */}
       <div style={s.main}>
         <div style={s.topBar}>
           <div>
@@ -61,7 +67,6 @@ export default function Dashboard() {
           <Link to="/invoices" style={s.ctaBtn}>+ New Invoice</Link>
         </div>
 
-        {/* Stat cards */}
         {stats ? (
           <>
             <div style={s.statRow}>
@@ -87,7 +92,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Quick links */}
             <div style={s.sectionTitle}>Quick Actions</div>
             <div style={s.quickRow}>
               {[
@@ -117,9 +121,9 @@ const s = {
   gold: { color: '#f9c84a' },
   sideTagline: { fontSize: '9px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 20px', marginBottom: '28px' },
   navSection: { fontSize: '9px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '0 20px', marginBottom: '6px' },
-  navItem: { display: 'block', padding: '9px 20px', fontSize: '13px', color: 'rgba(255,255,255,0.4)', textDecoration: 'none', borderLeft: '2px solid transparent', transition: 'all 0.15s' },
+  navItem: { display: 'block', padding: '9px 20px', fontSize: '13px', color: 'rgba(255,255,255,0.4)', textDecoration: 'none', borderLeft: '2px solid transparent' },
   navActive: { color: '#fff', background: 'rgba(249,200,74,0.08)', borderLeft: '2px solid #f9c84a' },
-  sideBottom: { display: 'flex', alignItems: 'center', gap: '10px', padding: '0 20px', borderTop: '0.5px solid rgba(255,255,255,0.06)', paddingTop: '16px' },
+  sideBottom: { display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 20px 0', borderTop: '0.5px solid rgba(255,255,255,0.06)' },
   avatar: { width: '30px', height: '30px', borderRadius: '50%', background: '#f9c84a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', color: '#0d0d0d', flexShrink: 0 },
   userName: { fontSize: '12px', color: 'rgba(255,255,255,0.6)' },
   logoutBtn: { fontSize: '11px', color: 'rgba(255,255,255,0.25)', cursor: 'pointer', marginTop: '2px' },
@@ -138,14 +142,3 @@ const s = {
   quickCard: { display: 'block', padding: '16px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '500', textDecoration: 'none', letterSpacing: '0.01em' },
   loading: { fontSize: '14px', color: '#999', marginTop: '40px' },
 };
-useEffect(() => {
-  api.get('/dashboard')
-    .then(res => setStats(res.data))
-    .catch((err) => {
-      console.log('Dashboard error:', err.response?.status);
-      if (err.response?.status === 401) {
-        localStorage.clear();
-        navigate('/login');
-      }
-    });
-}, []);
