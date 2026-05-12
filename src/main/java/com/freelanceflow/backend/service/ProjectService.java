@@ -37,6 +37,24 @@ public class ProjectService {
         return projectRepository.findByClientId(clientId);
     }
 
+    public Project updateProject(Long projectId, ProjectRequest request, String email) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        project.setTitle(request.getTitle());
+        project.setDescription(request.getDescription());
+        project.setTotalAmount(request.getTotalAmount());
+        project.setStartDate(request.getStartDate() != null ? LocalDate.parse(request.getStartDate()) : null);
+        project.setDueDate(request.getDueDate() != null ? LocalDate.parse(request.getDueDate()) : null);
+
+        // Only update status if provided in the request
+        if (request.getStatus() != null) {
+            project.setStatus(ProjectStatus.valueOf(request.getStatus()));
+        }
+
+        return projectRepository.save(project);
+    }
+
     public Project updateStatus(Long projectId, String status) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));

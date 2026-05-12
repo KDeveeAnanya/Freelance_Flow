@@ -39,6 +39,8 @@ export default function Clients() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', companyName: '' });
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', companyName: '' });
 
   useEffect(() => { fetchClients(); }, []);
 
@@ -57,6 +59,13 @@ export default function Clients() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = async (e, id) => {
+    e.preventDefault();
+    await api.put(`/clients/${id}`, editForm);
+    setEditingId(null);
+    fetchClients();
   };
 
   const handleDelete = async (id) => {
@@ -80,7 +89,6 @@ export default function Clients() {
           </button>
         </div>
 
-        {/* Add Client Form */}
         {showForm && (
           <div style={s.formCard}>
             <div style={s.formTitle}>New Client</div>
@@ -106,7 +114,6 @@ export default function Clients() {
           </div>
         )}
 
-        {/* Clients List */}
         {clients.length === 0 ? (
           <div style={s.empty}>
             <div style={s.emptyTitle}>No clients yet</div>
@@ -116,14 +123,42 @@ export default function Clients() {
           <div style={s.grid}>
             {clients.map(client => (
               <div key={client.id} style={s.card}>
-                <div style={s.cardTop}>
-                  <div style={s.clientAvatar}>{client.name?.[0]?.toUpperCase()}</div>
-                  <button style={s.deleteBtn} onClick={() => handleDelete(client.id)}>✕</button>
-                </div>
-                <div style={s.clientName}>{client.name}</div>
-                <div style={s.clientCompany}>{client.companyName}</div>
-                <div style={s.clientInfo}>{client.email}</div>
-                <div style={s.clientInfo}>{client.phone}</div>
+                {editingId === client.id ? (
+                  <form onSubmit={e => handleEdit(e, client.id)}>
+                    {[
+                      { key: 'name', placeholder: 'Full Name' },
+                      { key: 'email', placeholder: 'Email' },
+                      { key: 'phone', placeholder: 'Phone' },
+                      { key: 'companyName', placeholder: 'Company' },
+                    ].map(f => (
+                      <div key={f.key} style={{ marginBottom: '8px' }}>
+                        <input style={s.input} placeholder={f.placeholder}
+                          value={editForm[f.key]} onChange={e => setEditForm({ ...editForm, [f.key]: e.target.value })} />
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <button style={s.submitBtn} type="submit">Save</button>
+                      <button style={s.cancelBtn} type="button" onClick={() => setEditingId(null)}>Cancel</button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <div style={s.cardTop}>
+                      <div style={s.clientAvatar}>{client.name?.[0]?.toUpperCase()}</div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button style={s.editBtn} onClick={() => {
+                          setEditingId(client.id);
+                          setEditForm({ name: client.name, email: client.email, phone: client.phone, companyName: client.companyName });
+                        }}>✎</button>
+                        <button style={s.deleteBtn} onClick={() => handleDelete(client.id)}>✕</button>
+                      </div>
+                    </div>
+                    <div style={s.clientName}>{client.name}</div>
+                    <div style={s.clientCompany}>{client.companyName}</div>
+                    <div style={s.clientInfo}>{client.email}</div>
+                    <div style={s.clientInfo}>{client.phone}</div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -159,6 +194,7 @@ const s = {
   label: { display: 'block', fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#666', marginBottom: '6px' },
   input: { width: '100%', padding: '10px 12px', background: '#f5f4f0', border: '0.5px solid rgba(0,0,0,0.1)', borderRadius: '8px', fontSize: '13px', color: '#0d0d0d', outline: 'none', boxSizing: 'border-box' },
   submitBtn: { background: '#0d0d0d', color: '#f9c84a', padding: '10px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', border: 'none', cursor: 'pointer' },
+  cancelBtn: { background: '#f5f4f0', color: '#666', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', border: 'none', cursor: 'pointer' },
   empty: { textAlign: 'center', padding: '80px 0' },
   emptyTitle: { fontSize: '18px', fontWeight: '500', color: '#0d0d0d', marginBottom: '8px' },
   emptySub: { fontSize: '13px', color: '#999' },
@@ -166,6 +202,7 @@ const s = {
   card: { background: '#fff', borderRadius: '12px', padding: '20px', border: '0.5px solid rgba(0,0,0,0.06)' },
   cardTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' },
   clientAvatar: { width: '36px', height: '36px', borderRadius: '50%', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '600', color: '#534AB7' },
+  editBtn: { background: 'none', border: 'none', color: '#7F77DD', cursor: 'pointer', fontSize: '14px' },
   deleteBtn: { background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '14px' },
   clientName: { fontSize: '14px', fontWeight: '500', color: '#0d0d0d', marginBottom: '2px' },
   clientCompany: { fontSize: '12px', color: '#7F77DD', marginBottom: '8px' },

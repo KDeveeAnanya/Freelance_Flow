@@ -29,6 +29,13 @@ public class ProjectController {
         return ResponseEntity.ok(projectService.getProjectsByClient(clientId));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<Project> updateProject(@PathVariable Long id,
+                                                  @RequestBody ProjectRequest request,
+                                                  Authentication auth) {
+        return ResponseEntity.ok(projectService.updateProject(id, request, auth.getName()));
+    }
+
     @PutMapping("/{id}/status")
     public ResponseEntity<Project> updateStatus(@PathVariable Long id,
                                                  @RequestParam String status) {

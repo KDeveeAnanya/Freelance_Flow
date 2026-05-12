@@ -9,4 +9,5 @@ public class ProjectRequest {
     private String startDate;
     private String dueDate;
     private Long clientId;
+    private String status;
 }

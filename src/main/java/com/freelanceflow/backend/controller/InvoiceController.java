@@ -59,4 +59,21 @@ public class InvoiceController {
                                                  @RequestParam String status) {
         return ResponseEntity.ok(invoiceService.updateInvoiceStatus(invoiceId, status));
     }
+    @PutMapping("/{invoiceId}")
+public ResponseEntity<Invoice> updateInvoice(@PathVariable Long invoiceId,
+                                              @RequestBody Map<String, Object> body) {
+    Double totalAmount = body.get("totalAmount") != null ? 
+            Double.valueOf(body.get("totalAmount").toString()) : null;
+    String dueDate = body.get("dueDate") != null ? 
+            body.get("dueDate").toString() : null;
+    String status = body.get("status") != null ? 
+            body.get("status").toString() : null;
+    return ResponseEntity.ok(invoiceService.updateInvoice(invoiceId, totalAmount, dueDate, status));
+}
+
+@DeleteMapping("/{invoiceId}")
+public ResponseEntity<String> deleteInvoice(@PathVariable Long invoiceId) {
+    invoiceService.deleteInvoice(invoiceId);
+    return ResponseEntity.ok("Invoice deleted");
+}
 }

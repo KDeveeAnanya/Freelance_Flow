@@ -42,18 +42,19 @@ const statusColors = {
 };
 
 export default function Invoices() {
-  const [projects, setProjects] = useState([]);
-  const [invoices, setInvoices] = useState([]);
-  const [showForm, setShowForm] = useState(false);
+  const [projects, setProjects]               = useState([]);
+  const [invoices, setInvoices]               = useState([]);
+  const [showForm, setShowForm]               = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(null);
-  const [payments, setPayments] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ projectId: '', totalAmount: '', dueDate: '' });
+  const [editingInvoice, setEditingInvoice]   = useState(null);
+  const [payments, setPayments]               = useState({});
+  const [loading, setLoading]                 = useState(false);
+  const [copiedId, setCopiedId]               = useState(null); // ← for copy feedback
+  const [form, setForm]       = useState({ projectId: '', totalAmount: '', dueDate: '' });
   const [payForm, setPayForm] = useState({ amount: '', paymentMode: 'UPI', referenceId: '', note: '' });
+  const [editForm, setEditForm] = useState({ totalAmount: '', dueDate: '', status: '' });
 
-  useEffect(() => {
-    fetchAll();
-  }, []);
+  useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = async () => {
     const clientsRes = await api.get('/clients');
@@ -78,9 +79,9 @@ export default function Invoices() {
     setLoading(true);
     try {
       await api.post('/invoices', {
-        projectId: parseInt(form.projectId),
+        projectId:   parseInt(form.projectId),
         totalAmount: parseFloat(form.totalAmount),
-        dueDate: form.dueDate || null
+        dueDate:     form.dueDate || null
       });
       setForm({ projectId: '', totalAmount: '', dueDate: '' });
       setShowForm(false);
@@ -95,10 +96,10 @@ export default function Invoices() {
     setLoading(true);
     try {
       await api.post(`/invoices/${invoiceId}/payments`, {
-        amount: parseFloat(payForm.amount),
+        amount:      parseFloat(payForm.amount),
         paymentMode: payForm.paymentMode,
         referenceId: payForm.referenceId,
-        note: payForm.note
+        note:        payForm.note
       });
       setPayForm({ amount: '', paymentMode: 'UPI', referenceId: '', note: '' });
       setShowPaymentForm(null);
@@ -107,6 +108,46 @@ export default function Invoices() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditClick = (inv) => {
+    setEditingInvoice(inv.id);
+    setEditForm({
+      totalAmount: inv.totalAmount,
+      dueDate:     inv.dueDate || '',
+      status:      inv.status,
+    });
+    setShowPaymentForm(null);
+  };
+
+  const handleEditInvoice = async (e, invoiceId) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.put(`/invoices/${invoiceId}`, {
+        totalAmount: parseFloat(editForm.totalAmount),
+        dueDate:     editForm.dueDate || null,
+        status:      editForm.status,
+      });
+      setEditingInvoice(null);
+      fetchAll();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteInvoice = async (invoiceId) => {
+    if (!window.confirm('Delete this invoice? This cannot be undone.')) return;
+    await api.delete(`/invoices/${invoiceId}`);
+    fetchAll();
+  };
+
+  // ── NEW: Copy portal link ────────────────────────────────────────────────
+  const handleCopyLink = (inv) => {
+    const link = `${window.location.origin}/portal/${inv.portalToken}`;
+    navigator.clipboard.writeText(link);
+    setCopiedId(inv.id);
+    setTimeout(() => setCopiedId(null), 2000); // reset after 2s
   };
 
   return (
@@ -133,18 +174,22 @@ export default function Invoices() {
                   <select style={s.input} value={form.projectId}
                     onChange={e => setForm({...form, projectId: e.target.value})} required>
                     <option value="">Select project</option>
-                    {projects.map(p => <option key={p.id} value={p.id}>{p.title} — {p.client?.name}</option>)}
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.title} — {p.client?.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div style={s.field}>
                   <label style={s.label}>Total Amount (₹)</label>
                   <input style={s.input} type="number" placeholder="15000"
-                    value={form.totalAmount} onChange={e => setForm({...form, totalAmount: e.target.value})} required />
+                    value={form.totalAmount}
+                    onChange={e => setForm({...form, totalAmount: e.target.value})} required />
                 </div>
                 <div style={s.field}>
                   <label style={s.label}>Due Date</label>
                   <input style={s.input} type="date"
-                    value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})} />
+                    value={form.dueDate}
+                    onChange={e => setForm({...form, dueDate: e.target.value})} />
                 </div>
               </div>
               <button style={s.submitBtn} type="submit" disabled={loading}>
@@ -174,12 +219,33 @@ export default function Invoices() {
                       <div style={s.amountPaid}>₹{inv.amountPaid?.toLocaleString('en-IN')} paid</div>
                       <div style={s.amountTotal}>of ₹{inv.totalAmount?.toLocaleString('en-IN')}</div>
                     </div>
-                    <div style={{...s.statusBadge, ...statusColors[inv.status]}}>{inv.status.replace('_', ' ')}</div>
+                    <div style={{...s.statusBadge, ...statusColors[inv.status]}}>
+                      {inv.status.replace('_', ' ')}
+                    </div>
+
+                    {/* ── Copy portal link ── */}
+                    <button style={{
+                      ...s.copyBtn,
+                      ...(copiedId === inv.id ? s.copyBtnDone : {})
+                    }} onClick={() => handleCopyLink(inv)}>
+                      {copiedId === inv.id ? '✓ Copied!' : '🔗 Copy Link'}
+                    </button>
+
+                    <button style={s.editBtn} onClick={() =>
+                      editingInvoice === inv.id ? setEditingInvoice(null) : handleEditClick(inv)
+                    }>
+                      {editingInvoice === inv.id ? '✕' : '✎ Edit'}
+                    </button>
+
                     <button style={s.payBtn} onClick={() => {
                       setShowPaymentForm(showPaymentForm === inv.id ? null : inv.id);
                       fetchPayments(inv.id);
                     }}>
                       {showPaymentForm === inv.id ? '✕' : '+ Payment'}
+                    </button>
+
+                    <button style={s.deleteBtn} onClick={() => handleDeleteInvoice(inv.id)}>
+                      🗑
                     </button>
                   </div>
                 </div>
@@ -192,6 +258,42 @@ export default function Invoices() {
                   }} />
                 </div>
 
+                {/* Edit form */}
+                {editingInvoice === inv.id && (
+                  <div style={s.payFormWrap}>
+                    <div style={s.payHistoryTitle}>Edit Invoice</div>
+                    <form onSubmit={e => handleEditInvoice(e, inv.id)}>
+                      <div style={s.editGrid}>
+                        <div style={s.field}>
+                          <label style={s.label}>Total Amount (₹)</label>
+                          <input style={s.input} type="number"
+                            value={editForm.totalAmount}
+                            onChange={e => setEditForm({...editForm, totalAmount: e.target.value})} required />
+                        </div>
+                        <div style={s.field}>
+                          <label style={s.label}>Due Date</label>
+                          <input style={s.input} type="date"
+                            value={editForm.dueDate}
+                            onChange={e => setEditForm({...editForm, dueDate: e.target.value})} />
+                        </div>
+                        <div style={s.field}>
+                          <label style={s.label}>Status</label>
+                          <select style={s.input} value={editForm.status}
+                            onChange={e => setEditForm({...editForm, status: e.target.value})}>
+                            <option value="DRAFT">Draft</option>
+                            <option value="SENT">Sent</option>
+                            <option value="PARTIALLY_PAID">Partially Paid</option>
+                            <option value="PAID">Paid</option>
+                          </select>
+                        </div>
+                      </div>
+                      <button style={s.submitBtn} type="submit" disabled={loading}>
+                        {loading ? 'Saving...' : '→ Save Changes'}
+                      </button>
+                    </form>
+                  </div>
+                )}
+
                 {/* Payment form */}
                 {showPaymentForm === inv.id && (
                   <div style={s.payFormWrap}>
@@ -200,7 +302,8 @@ export default function Invoices() {
                         <div style={s.field}>
                           <label style={s.label}>Amount (₹)</label>
                           <input style={s.input} type="number" placeholder="5000"
-                            value={payForm.amount} onChange={e => setPayForm({...payForm, amount: e.target.value})} required />
+                            value={payForm.amount}
+                            onChange={e => setPayForm({...payForm, amount: e.target.value})} required />
                         </div>
                         <div style={s.field}>
                           <label style={s.label}>Payment Mode</label>
@@ -214,12 +317,14 @@ export default function Invoices() {
                         <div style={s.field}>
                           <label style={s.label}>Reference ID</label>
                           <input style={s.input} placeholder="UPI123456"
-                            value={payForm.referenceId} onChange={e => setPayForm({...payForm, referenceId: e.target.value})} required />
+                            value={payForm.referenceId}
+                            onChange={e => setPayForm({...payForm, referenceId: e.target.value})} required />
                         </div>
                         <div style={s.field}>
                           <label style={s.label}>Note</label>
                           <input style={s.input} placeholder="First installment"
-                            value={payForm.note} onChange={e => setPayForm({...payForm, note: e.target.value})} />
+                            value={payForm.note}
+                            onChange={e => setPayForm({...payForm, note: e.target.value})} />
                         </div>
                       </div>
                       <button style={s.submitBtn} type="submit" disabled={loading}>
@@ -227,7 +332,6 @@ export default function Invoices() {
                       </button>
                     </form>
 
-                    {/* Payment history */}
                     {payments[inv.id]?.length > 0 && (
                       <div style={s.payHistory}>
                         <div style={s.payHistoryTitle}>Payment History</div>
@@ -275,6 +379,7 @@ const s = {
   formCard: { background: '#fff', borderRadius: '12px', padding: '24px', marginBottom: '24px', border: '0.5px solid rgba(0,0,0,0.06)' },
   formTitle: { fontSize: '15px', fontWeight: '500', color: '#0d0d0d', marginBottom: '16px' },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' },
+  editGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' },
   field: {},
   label: { display: 'block', fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#666', marginBottom: '6px' },
   input: { width: '100%', padding: '10px 12px', background: '#f5f4f0', border: '0.5px solid rgba(0,0,0,0.1)', borderRadius: '8px', fontSize: '13px', color: '#0d0d0d', outline: 'none', boxSizing: 'border-box' },
@@ -294,7 +399,11 @@ const s = {
   amountPaid: { fontSize: '15px', fontWeight: '500', color: '#0d0d0d' },
   amountTotal: { fontSize: '11px', color: '#999' },
   statusBadge: { padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '500' },
+  copyBtn: { background: '#EEEDFE', color: '#534AB7', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', border: 'none', cursor: 'pointer', transition: 'all 0.2s' },
+  copyBtnDone: { background: '#E1F5EE', color: '#0F6E56' },
+  editBtn: { background: '#f5f4f0', color: '#0d0d0d', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', border: '0.5px solid rgba(0,0,0,0.1)', cursor: 'pointer' },
   payBtn: { background: '#0d0d0d', color: '#f9c84a', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', border: 'none', cursor: 'pointer' },
+  deleteBtn: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '4px' },
   progressBg: { height: '4px', background: '#f0f0f0', borderRadius: '2px', overflow: 'hidden' },
   progressFill: { height: '100%', background: '#0d0d0d', borderRadius: '2px', transition: 'width 0.3s ease' },
   payFormWrap: { marginTop: '16px', paddingTop: '16px', borderTop: '0.5px solid rgba(0,0,0,0.06)' },

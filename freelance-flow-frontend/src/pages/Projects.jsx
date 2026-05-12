@@ -38,12 +38,14 @@ const statusColors = {
   ACTIVE:    { bg: '#E1F5EE', color: '#0F6E56' },
   COMPLETED: { bg: '#EEEDFE', color: '#534AB7' },
   ON_HOLD:   { bg: '#FAEEDA', color: '#854F0B' },
+  CANCELLED: { bg: '#FCEBEB', color: '#A32D2D' },
 };
 
 export default function Projects() {
   const [clients, setClients] = useState([]);
   const [projects, setProjects] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     title: '', description: '', totalAmount: '',
@@ -62,9 +64,7 @@ export default function Projects() {
         clientsRes.data.map(c => api.get(`/projects/client/${c.id}`).then(r => r.data))
       );
       setProjects(allProjects.flat());
-    } catch (e) {
-      console.log(e);
-    }
+    } catch (e) { console.log(e); }
   };
 
   const handleAdd = async (e) => {
@@ -76,12 +76,43 @@ export default function Projects() {
         totalAmount: parseFloat(form.totalAmount),
         clientId: parseInt(form.clientId)
       });
-      setForm({ title: '', description: '', totalAmount: '', startDate: '', dueDate: '', clientId: '' });
-      setShowForm(false);
+      resetForm();
       fetchAllProjects();
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
+  };
+
+  const handleEdit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.put(`/projects/${editingProject.id}`, {
+        ...form,
+        totalAmount: parseFloat(form.totalAmount),
+        clientId: parseInt(form.clientId)
+      });
+      resetForm();
+      fetchAllProjects();
+    } finally { setLoading(false); }
+  };
+
+  const resetForm = () => {
+    setForm({ title: '', description: '', totalAmount: '', startDate: '', dueDate: '', clientId: '' });
+    setShowForm(false);
+    setEditingProject(null);
+  };
+
+  const openEdit = (project) => {
+    setEditingProject(project);
+    setForm({
+      title: project.title || '',
+      description: project.description || '',
+      totalAmount: project.totalAmount || '',
+      startDate: project.startDate || '',
+      dueDate: project.dueDate || '',
+      clientId: project.client?.id || '',
+    });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleStatusChange = async (id, status) => {
@@ -105,15 +136,15 @@ export default function Projects() {
             <div style={s.pageTitle}>Projects</div>
             <div style={s.pageDate}>{projects.length} project{projects.length !== 1 ? 's' : ''} total</div>
           </div>
-          <button style={s.ctaBtn} onClick={() => setShowForm(!showForm)}>
+          <button style={s.ctaBtn} onClick={() => { resetForm(); setShowForm(!showForm); }}>
             {showForm ? '✕ Cancel' : '+ New Project'}
           </button>
         </div>
 
         {showForm && (
           <div style={s.formCard}>
-            <div style={s.formTitle}>New Project</div>
-            <form onSubmit={handleAdd}>
+            <div style={s.formTitle}>{editingProject ? `Editing: ${editingProject.title}` : 'New Project'}</div>
+            <form onSubmit={editingProject ? handleEdit : handleAdd}>
               <div style={s.formGrid}>
                 <div style={s.field}>
                   <label style={s.label}>Project Title</label>
@@ -149,9 +180,14 @@ export default function Projects() {
                     value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})} />
                 </div>
               </div>
-              <button style={s.submitBtn} type="submit" disabled={loading}>
-                {loading ? 'Creating...' : '→ Create Project'}
-              </button>
+              <div style={{display:'flex', gap:'10px'}}>
+                <button style={s.submitBtn} type="submit" disabled={loading}>
+                  {loading ? 'Saving...' : editingProject ? '→ Save Changes' : '→ Create Project'}
+                </button>
+                {editingProject && (
+                  <button style={s.cancelBtn} type="button" onClick={resetForm}>Cancel</button>
+                )}
+              </div>
             </form>
           </div>
         )}
@@ -163,30 +199,36 @@ export default function Projects() {
           </div>
         ) : (
           <div style={s.list}>
-            {projects.map(project => (
-              <div key={project.id} style={s.card}>
-                <div style={s.cardLeft}>
-                  <div style={s.projectTitle}>{project.title}</div>
-                  <div style={s.projectClient}>{project.client?.name} · {project.client?.companyName}</div>
-                  {project.description && <div style={s.projectDesc}>{project.description}</div>}
-                  <div style={s.projectMeta}>
-                    {project.startDate && <span>Start: {project.startDate}</span>}
-                    {project.dueDate && <span style={{marginLeft: '12px'}}>Due: {project.dueDate}</span>}
+            {projects.map(project => {
+              const sc = statusColors[project.status] || statusColors.ACTIVE;
+              return (
+                <div key={project.id} style={s.card}>
+                  <div style={s.cardLeft}>
+                    <div style={s.projectTitle}>{project.title}</div>
+                    <div style={s.projectClient}>{project.client?.name} · {project.client?.companyName}</div>
+                    {project.description && <div style={s.projectDesc}>{project.description}</div>}
+                    <div style={s.projectMeta}>
+                      {project.startDate && <span>Start: {project.startDate}</span>}
+                      {project.dueDate && <span style={{marginLeft:'12px'}}>Due: {project.dueDate}</span>}
+                    </div>
+                  </div>
+                  <div style={s.cardRight}>
+                    <div style={s.amount}>₹{project.totalAmount?.toLocaleString('en-IN')}</div>
+                    <select
+                      style={{...s.statusBadge, background: sc.bg, color: sc.color}}
+                      value={project.status}
+                      onChange={e => handleStatusChange(project.id, e.target.value)}>
+                      <option value="ACTIVE">Active</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="ON_HOLD">On Hold</option>
+                      <option value="CANCELLED">Cancelled</option>
+                    </select>
+                    <button style={s.editBtn} onClick={() => openEdit(project)}>✏️</button>
+                    <button style={s.deleteBtn} onClick={() => handleDelete(project.id)}>✕</button>
                   </div>
                 </div>
-                <div style={s.cardRight}>
-                  <div style={s.amount}>₹{project.totalAmount?.toLocaleString('en-IN')}</div>
-                  <select style={{...s.statusBadge, ...statusColors[project.status]}}
-                    value={project.status}
-                    onChange={e => handleStatusChange(project.id, e.target.value)}>
-                    <option value="ACTIVE">Active</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="ON_HOLD">On Hold</option>
-                  </select>
-                  <button style={s.deleteBtn} onClick={() => handleDelete(project.id)}>✕</button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -220,6 +262,7 @@ const s = {
   label: { display: 'block', fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#666', marginBottom: '6px' },
   input: { width: '100%', padding: '10px 12px', background: '#f5f4f0', border: '0.5px solid rgba(0,0,0,0.1)', borderRadius: '8px', fontSize: '13px', color: '#0d0d0d', outline: 'none', boxSizing: 'border-box' },
   submitBtn: { background: '#0d0d0d', color: '#f9c84a', padding: '10px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', border: 'none', cursor: 'pointer' },
+  cancelBtn: { background: 'transparent', color: '#999', padding: '10px 20px', borderRadius: '8px', fontSize: '13px', border: '0.5px solid #ddd', cursor: 'pointer' },
   empty: { textAlign: 'center', padding: '80px 0' },
   emptyTitle: { fontSize: '18px', fontWeight: '500', color: '#0d0d0d', marginBottom: '8px' },
   emptySub: { fontSize: '13px', color: '#999' },
@@ -233,5 +276,6 @@ const s = {
   cardRight: { display: 'flex', alignItems: 'center', gap: '12px' },
   amount: { fontSize: '16px', fontWeight: '500', color: '#0d0d0d' },
   statusBadge: { padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '500', border: 'none', cursor: 'pointer' },
+  editBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' },
   deleteBtn: { background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '14px' },
 };
