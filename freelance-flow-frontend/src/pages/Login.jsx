@@ -1,87 +1,281 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 
-export default function Login() {
+const Sidebar = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const name = localStorage.getItem('name');
+  return (
+    <div style={s.sidebar}>
+      <div style={s.sideTop}>
+        <div style={s.wordmark}>Freelance<span style={s.gold}>Flow</span></div>
+        <div style={s.sideTagline}>your creative OS</div>
+        <div style={s.navSection}>Main</div>
+        {[
+          { label: 'Dashboard', path: '/dashboard' },
+          { label: 'Clients',   path: '/clients' },
+          { label: 'Projects',  path: '/projects' },
+          { label: 'Invoices',  path: '/invoices' },
+        ].map(item => (
+          <Link key={item.path} to={item.path} style={{
+            ...s.navItem,
+            ...(location.pathname === item.path ? s.navActive : {})
+          }}>{item.label}</Link>
+        ))}
+      </div>
+      <div style={s.sideBottom}>
+        <div style={s.avatar}>{name?.[0]?.toUpperCase()}</div>
+        <div>
+          <div style={s.userName}>{name}</div>
+          <div style={s.logoutBtn} onClick={() => { localStorage.clear(); navigate('/login'); }}>Sign out</div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-  const handleSubmit = async (e) => {
+const statusColors = {
+  ACTIVE:    { bg: '#E1F5EE', color: '#0F6E56' },
+  COMPLETED: { bg: '#EEEDFE', color: '#534AB7' },
+  ON_HOLD:   { bg: '#FAEEDA', color: '#854F0B' },
+  CANCELLED: { bg: '#FCEBEB', color: '#A32D2D' },
+};
+
+export default function Projects() {
+  const [clients, setClients] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    title: '', description: '', totalAmount: '',
+    startDate: '', dueDate: '', clientId: ''
+  });
+
+  useEffect(() => {
+    api.get('/clients').then(res => setClients(res.data));
+    fetchAllProjects();
+  }, []);
+
+  const fetchAllProjects = async () => {
+    try {
+      const clientsRes = await api.get('/clients');
+      const allProjects = await Promise.all(
+        clientsRes.data.map(c => api.get(`/projects/client/${c.id}`).then(r => r.data))
+      );
+      setProjects(allProjects.flat());
+    } catch (e) { console.log(e); }
+  };
+
+  const handleAdd = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
     try {
-      const res = await api.post('/auth/login', form);
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('name', res.data.name);
-      navigate('/dashboard');
-    } catch {
-      setError('Invalid email or password');
-    } finally {
-      setLoading(false);
+      await api.post('/projects', {
+        ...form,
+        totalAmount: parseFloat(form.totalAmount),
+        clientId: parseInt(form.clientId)
+      });
+      resetForm();
+      fetchAllProjects();
+    } finally { setLoading(false); }
+  };
+
+  const handleEdit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.put(`/projects/${editingProject.id}`, {
+        ...form,
+        totalAmount: parseFloat(form.totalAmount),
+        clientId: parseInt(form.clientId)
+      });
+      resetForm();
+      fetchAllProjects();
+    } finally { setLoading(false); }
+  };
+
+  const resetForm = () => {
+    setForm({ title: '', description: '', totalAmount: '', startDate: '', dueDate: '', clientId: '' });
+    setShowForm(false);
+    setEditingProject(null);
+  };
+
+  const openEdit = (project) => {
+    setEditingProject(project);
+    setForm({
+      title: project.title || '',
+      description: project.description || '',
+      totalAmount: project.totalAmount || '',
+      startDate: project.startDate || '',
+      dueDate: project.dueDate || '',
+      clientId: project.client?.id || '',
+    });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleStatusChange = async (id, status) => {
+    await api.put(`/projects/${id}/status?status=${status}`);
+    fetchAllProjects();
+  };
+
+  const handleDelete = async (id) => {
+    if (confirm('Delete this project?')) {
+      await api.delete(`/projects/${id}`);
+      fetchAllProjects();
     }
   };
 
   return (
-    <div style={s.page}>
-      <div style={s.left}>
-        <div style={s.leftInner}>
-          <div style={s.wordmark}>Freelance<span style={s.gold}>Flow</span></div>
-          <div style={s.bigLine}>Get paid.</div>
-          <div style={s.bigLine}>Stay <span style={s.gold}>unbothered.</span></div>
-          <p style={s.leftSub}>Track clients, projects & invoices — all in one place.</p>
-          <div style={s.leftFooter}>Built for freelancers who mean business.</div>
+    <div style={s.shell}>
+      <Sidebar />
+      <div style={s.main}>
+        <div style={s.topBar}>
+          <div>
+            <div style={s.pageTitle}>Projects</div>
+            <div style={s.pageDate}>{projects.length} project{projects.length !== 1 ? 's' : ''} total</div>
+          </div>
+          <button style={s.ctaBtn} onClick={() => { resetForm(); setShowForm(!showForm); }}>
+            {showForm ? '✕ Cancel' : '+ New Project'}
+          </button>
         </div>
-      </div>
-      <div style={s.right}>
-        <div style={s.card}>
-          <h2 style={s.formTitle}>Welcome back</h2>
-          <p style={s.formSub}>Sign in to your account</p>
-          {error && <div style={s.error}>{error}</div>}
-          <form onSubmit={handleSubmit}>
-            <div style={s.field}>
-              <label style={s.label}>Email</label>
-              <input style={s.input} type="email" placeholder="you@example.com"
-                value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-            </div>
-            <div style={s.field}>
-              <label style={s.label}>Password</label>
-              <input style={s.input} type="password" placeholder="••••••••"
-                value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
-            </div>
-            <button style={s.btn} type="submit" disabled={loading}>
-              {loading ? 'Signing in...' : '→ Sign in'}
-            </button>
-          </form>
-          <p style={s.switchLink}>
-            No account? <Link to="/register" style={s.link}>Register here</Link>
-          </p>
-        </div>
+
+        {showForm && (
+          <div style={s.formCard}>
+            <div style={s.formTitle}>{editingProject ? `Editing: ${editingProject.title}` : 'New Project'}</div>
+            <form onSubmit={editingProject ? handleEdit : handleAdd}>
+              <div style={s.formGrid}>
+                <div style={s.field}>
+                  <label style={s.label}>Project Title</label>
+                  <input style={s.input} placeholder="Logo Design"
+                    value={form.title} onChange={e => setForm({...form, title: e.target.value})} required />
+                </div>
+                <div style={s.field}>
+                  <label style={s.label}>Client</label>
+                  <select style={s.input} value={form.clientId}
+                    onChange={e => setForm({...form, clientId: e.target.value})} required>
+                    <option value="">Select client</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div style={s.field}>
+                  <label style={s.label}>Total Amount (₹)</label>
+                  <input style={s.input} type="number" placeholder="15000"
+                    value={form.totalAmount} onChange={e => setForm({...form, totalAmount: e.target.value})} required />
+                </div>
+                <div style={s.field}>
+                  <label style={s.label}>Description</label>
+                  <input style={s.input} placeholder="Brief description"
+                    value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
+                </div>
+                <div style={s.field}>
+                  <label style={s.label}>Start Date</label>
+                  <input style={s.input} type="date"
+                    value={form.startDate} onChange={e => setForm({...form, startDate: e.target.value})} />
+                </div>
+                <div style={s.field}>
+                  <label style={s.label}>Due Date</label>
+                  <input style={s.input} type="date"
+                    value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})} />
+                </div>
+              </div>
+              <div style={{display:'flex', gap:'10px'}}>
+                <button style={s.submitBtn} type="submit" disabled={loading}>
+                  {loading ? 'Saving...' : editingProject ? '→ Save Changes' : '→ Create Project'}
+                </button>
+                {editingProject && (
+                  <button style={s.cancelBtn} type="button" onClick={resetForm}>Cancel</button>
+                )}
+              </div>
+            </form>
+          </div>
+        )}
+
+        {projects.length === 0 ? (
+          <div style={s.empty}>
+            <div style={s.emptyTitle}>No projects yet</div>
+            <div style={s.emptySub}>Create your first project to get started</div>
+          </div>
+        ) : (
+          <div style={s.list}>
+            {projects.map(project => {
+              const sc = statusColors[project.status] || statusColors.ACTIVE;
+              return (
+                <div key={project.id} style={s.card}>
+                  <div style={s.cardLeft}>
+                    <div style={s.projectTitle}>{project.title}</div>
+                    <div style={s.projectClient}>{project.client?.name} · {project.client?.companyName}</div>
+                    {project.description && <div style={s.projectDesc}>{project.description}</div>}
+                    <div style={s.projectMeta}>
+                      {project.startDate && <span>Start: {project.startDate}</span>}
+                      {project.dueDate && <span style={{marginLeft:'12px'}}>Due: {project.dueDate}</span>}
+                    </div>
+                  </div>
+                  <div style={s.cardRight}>
+                    <div style={s.amount}>₹{project.totalAmount?.toLocaleString('en-IN')}</div>
+                    <select
+                      style={{...s.statusBadge, background: sc.bg, color: sc.color}}
+                      value={project.status}
+                      onChange={e => handleStatusChange(project.id, e.target.value)}>
+                      <option value="ACTIVE">Active</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="ON_HOLD">On Hold</option>
+                      <option value="CANCELLED">Cancelled</option>
+                    </select>
+                    <button style={s.editBtn} onClick={() => openEdit(project)}>✏️</button>
+                    <button style={s.deleteBtn} onClick={() => handleDelete(project.id)}>✕</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 const s = {
-  page: { display: 'flex', minHeight: '100vh' },
-  left: { flex: 1, background: '#0d0d0d', display: 'flex', alignItems: 'center', padding: '60px' },
-  leftInner: { maxWidth: '420px' },
-  wordmark: { fontSize: '13px', fontWeight: '500', color: '#fff', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '48px', opacity: 0.6 },
+  shell: { display: 'flex', minHeight: '100vh', fontFamily: "'Inter', sans-serif" },
+  sidebar: { width: '220px', background: '#0d0d0d', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px 0', flexShrink: 0 },
+  sideTop: { display: 'flex', flexDirection: 'column' },
+  wordmark: { fontSize: '13px', fontWeight: '500', color: '#fff', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '0 20px', marginBottom: '4px' },
   gold: { color: '#f9c84a' },
-  bigLine: { fontSize: '52px', fontWeight: '500', color: '#fff', lineHeight: '1.05', letterSpacing: '-0.02em' },
-  leftSub: { fontSize: '14px', color: 'rgba(255,255,255,0.35)', marginTop: '24px', lineHeight: '1.6' },
-  leftFooter: { marginTop: '64px', fontSize: '11px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.06em', textTransform: 'uppercase' },
-  right: { width: '480px', background: '#f5f4f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' },
-  card: { width: '100%', maxWidth: '360px' },
-  formTitle: { fontSize: '28px', fontWeight: '500', color: '#0d0d0d', letterSpacing: '-0.02em', marginBottom: '4px' },
-  formSub: { fontSize: '13px', color: '#999', marginBottom: '32px' },
-  field: { marginBottom: '16px' },
+  sideTagline: { fontSize: '9px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 20px', marginBottom: '28px' },
+  navSection: { fontSize: '9px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '0 20px', marginBottom: '6px' },
+  navItem: { display: 'block', padding: '9px 20px', fontSize: '13px', color: 'rgba(255,255,255,0.4)', textDecoration: 'none', borderLeft: '2px solid transparent' },
+  navActive: { color: '#fff', background: 'rgba(249,200,74,0.08)', borderLeft: '2px solid #f9c84a' },
+  sideBottom: { display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 20px 0', borderTop: '0.5px solid rgba(255,255,255,0.06)' },
+  avatar: { width: '30px', height: '30px', borderRadius: '50%', background: '#f9c84a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', color: '#0d0d0d', flexShrink: 0 },
+  userName: { fontSize: '12px', color: 'rgba(255,255,255,0.6)' },
+  logoutBtn: { fontSize: '11px', color: 'rgba(255,255,255,0.25)', cursor: 'pointer', marginTop: '2px' },
+  main: { flex: 1, background: '#f5f4f0', padding: '32px 36px', overflowY: 'auto' },
+  topBar: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px' },
+  pageTitle: { fontSize: '28px', fontWeight: '500', color: '#0d0d0d', letterSpacing: '-0.02em' },
+  pageDate: { fontSize: '12px', color: '#999', marginTop: '4px' },
+  ctaBtn: { background: '#0d0d0d', color: '#f9c84a', padding: '10px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', border: 'none', cursor: 'pointer' },
+  formCard: { background: '#fff', borderRadius: '12px', padding: '24px', marginBottom: '24px', border: '0.5px solid rgba(0,0,0,0.06)' },
+  formTitle: { fontSize: '15px', fontWeight: '500', color: '#0d0d0d', marginBottom: '16px' },
+  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' },
+  field: {},
   label: { display: 'block', fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#666', marginBottom: '6px' },
-  input: { width: '100%', padding: '12px 14px', background: '#fff', border: '0.5px solid rgba(0,0,0,0.12)', borderRadius: '8px', fontSize: '14px', color: '#0d0d0d', outline: 'none', boxSizing: 'border-box' },
-  btn: { width: '100%', padding: '13px', background: '#0d0d0d', color: '#f9c84a', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', letterSpacing: '0.02em', marginTop: '8px' },
-  error: { background: '#FCEBEB', color: '#A32D2D', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' },
-  switchLink: { textAlign: 'center', marginTop: '24px', fontSize: '13px', color: '#999' },
-  link: { color: '#0d0d0d', fontWeight: '500', textDecoration: 'none' },
+  input: { width: '100%', padding: '10px 12px', background: '#f5f4f0', border: '0.5px solid rgba(0,0,0,0.1)', borderRadius: '8px', fontSize: '13px', color: '#0d0d0d', outline: 'none', boxSizing: 'border-box' },
+  submitBtn: { background: '#0d0d0d', color: '#f9c84a', padding: '10px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', border: 'none', cursor: 'pointer' },
+  cancelBtn: { background: 'transparent', color: '#999', padding: '10px 20px', borderRadius: '8px', fontSize: '13px', border: '0.5px solid #ddd', cursor: 'pointer' },
+  empty: { textAlign: 'center', padding: '80px 0' },
+  emptyTitle: { fontSize: '18px', fontWeight: '500', color: '#0d0d0d', marginBottom: '8px' },
+  emptySub: { fontSize: '13px', color: '#999' },
+  list: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  card: { background: '#fff', borderRadius: '12px', padding: '20px 24px', border: '0.5px solid rgba(0,0,0,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  cardLeft: { flex: 1 },
+  projectTitle: { fontSize: '15px', fontWeight: '500', color: '#0d0d0d', marginBottom: '4px' },
+  projectClient: { fontSize: '12px', color: '#7F77DD', marginBottom: '4px' },
+  projectDesc: { fontSize: '12px', color: '#999', marginBottom: '6px' },
+  projectMeta: { fontSize: '11px', color: '#bbb' },
+  cardRight: { display: 'flex', alignItems: 'center', gap: '12px' },
+  amount: { fontSize: '16px', fontWeight: '500', color: '#0d0d0d' },
+  statusBadge: { padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '500', border: 'none', cursor: 'pointer' },
+  editBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' },
+  deleteBtn: { background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '14px' },
 };
