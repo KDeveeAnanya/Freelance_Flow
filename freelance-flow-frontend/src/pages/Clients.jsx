@@ -169,7 +169,7 @@ export default function Clients() {
 }
 
 const s = {
-  shell: { display: 'flex', minHeight: '100vh', fontFamily: "'Inter', sans-serif" },
+  shell: { display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', fontFamily: "'Inter', sans-serif", position: 'fixed', top: 0, left: 0 },
   sidebar: { width: '220px', background: '#0d0d0d', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px 0', flexShrink: 0 },
   sideTop: { display: 'flex', flexDirection: 'column' },
   wordmark: { fontSize: '13px', fontWeight: '500', color: '#fff', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '0 20px', marginBottom: '4px' },
@@ -182,7 +182,7 @@ const s = {
   avatar: { width: '30px', height: '30px', borderRadius: '50%', background: '#f9c84a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', color: '#0d0d0d', flexShrink: 0 },
   userName: { fontSize: '12px', color: 'rgba(255,255,255,0.6)' },
   logoutBtn: { fontSize: '11px', color: 'rgba(255,255,255,0.25)', cursor: 'pointer', marginTop: '2px' },
-  main: { flex: 1, background: '#f5f4f0', padding: '32px 36px', overflowY: 'auto' },
+  main: { flex: 1, background: '#f5f4f0', padding: '32px 36px', overflowY: 'auto', height: '100vh' },
   topBar: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px' },
   pageTitle: { fontSize: '28px', fontWeight: '500', color: '#0d0d0d', letterSpacing: '-0.02em' },
   pageDate: { fontSize: '12px', color: '#999', marginTop: '4px' },
