@@ -1,16 +1,57 @@
-# React + Vite
+# FreelanceFlow - Freelancer Management Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack freelancer management platform that helps clients and freelancers handle end-to-end project workflows — from onboarding to payments.
 
-Currently, two official plugins are available:
+**Live Demo:** [Add your deployed link here]  
+**Backend Repo:** [Link if separate]  
+**Frontend:** React + Vite
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## ✨ Features
 
-## React Compiler
+### For Clients & Freelancers
+- **User Authentication & Role-Based Access** (Client / Freelancer / Admin)
+- **Client & Freelancer Onboarding**
+- **Project Creation & Tracking** with status updates
+- **Milestone Management**
+- **Invoicing System**
+- **Payment Tracking & History**
+- **Real-time Dashboard** with business insights
+- **Protected Routes & Secure Data Isolation**
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Technical Highlights
+- **15+ REST APIs** built with Spring Boot
+- **JWT Authentication** + Role-based Authorization (Spring Security)
+- **Normalized PostgreSQL Database** with JPA/Hibernate
+- **Responsive React Dashboard** (Tailwind CSS)
+- Clean, layered architecture (Controller → Service → Repository)
 
-## Expanding the ESLint configuration
+## 🛠 Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+**Backend:**
+- Java + Spring Boot
+- Spring Security + JWT
+- JPA / Hibernate
+- PostgreSQL
+
+**Frontend:**
+- React.js + Vite
+- Tailwind CSS
+- Axios
+
+**Tools:**
+- Git
+- Railway / Vercel (Deployment)
+
+## 📸 Screenshots
+
+![Dashboard](screenshots/dashboard.png)
+*Main Dashboard with real-time insights*
+
+![Projects](screenshots/projects.png)
+*Project creation and tracking*
+
+![Invoice](screenshots/invoice.png)
+*Invoicing and payment management*
+
+![Mobile View](screenshots/mobile.png)
+*Responsive design across devices*

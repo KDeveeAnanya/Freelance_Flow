@@ -85,7 +85,7 @@ export default function Register() {
 }
 
 const s = {
-  page: { display: 'flex', minHeight: '100vh' },
+  page: { display: 'flex', minHeight: '100vh', width: '100%', margin: 0, padding: 0 },
   left: { flex: 1, background: '#0d0d0d', display: 'flex', alignItems: 'center', padding: '60px' },
   leftInner: { maxWidth: '420px' },
   wordmark: { fontSize: '13px', fontWeight: '500', color: '#fff', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '48px', opacity: 0.6 },
