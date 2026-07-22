@@ -6,7 +6,7 @@ A full-stack freelancer management platform that helps clients and freelancers h
 **Backend Repo:** [Link if separate]  
 **Frontend:** React + Vite
 
-## ✨ Features
+## Features
 
 ### For Clients & Freelancers
 - **User Authentication & Role-Based Access** (Client / Freelancer / Admin)
@@ -42,7 +42,7 @@ A full-stack freelancer management platform that helps clients and freelancers h
 - Git
 - Railway / Vercel (Deployment)
 
-## 📸 Screenshots
+## Screenshots
 
 ![Dashboard](screenshots/dashboard.png)
 *Main Dashboard with real-time insights*
