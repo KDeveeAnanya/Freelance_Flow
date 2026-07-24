@@ -2,8 +2,6 @@
 
 A full-stack freelancer management platform that helps clients and freelancers handle end-to-end project workflows — from onboarding to payments.
 
-**Live Demo:** [Add your deployed link here]  
-**Backend Repo:** [Link if separate]  
 **Frontend:** React + Vite
 
 ## Features
